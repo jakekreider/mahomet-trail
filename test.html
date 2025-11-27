@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mahomet Trail - Test Suite</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background-color: #1a1a1a;
+            color: #00ff00;
+            padding: 20px;
+        }
+
+        .test-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: #000;
+            border: 3px solid #00ff00;
+            padding: 30px;
+        }
+
+        h1 {
+            color: #ffff00;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2rem;
+            text-shadow: 2px 2px #666600;
+        }
+
+        .test-section {
+            margin: 20px 0;
+            border: 2px solid #006600;
+            padding: 15px;
+            background-color: #001a00;
+        }
+
+        .test-section h2 {
+            color: #00dddd;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+
+        .test-case {
+            padding: 10px;
+            margin: 8px 0;
+            border-left: 4px solid #666;
+            background-color: #000;
+        }
+
+        .test-case.pass {
+            border-left-color: #00ff00;
+        }
+
+        .test-case.fail {
+            border-left-color: #ff0000;
+        }
+
+        .test-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .test-result {
+            margin-left: 20px;
+            font-size: 0.9rem;
+        }
+
+        .pass .test-name::before {
+            content: "✓ ";
+            color: #00ff00;
+            font-weight: bold;
+        }
+
+        .fail .test-name::before {
+            content: "✗ ";
+            color: #ff0000;
+            font-weight: bold;
+        }
+
+        .test-detail {
+            color: #888;
+            font-size: 0.85rem;
+            margin-left: 20px;
+        }
+
+        .summary {
+            background-color: #003300;
+            border: 3px solid #00ff00;
+            padding: 20px;
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        .summary h2 {
+            color: #ffff00;
+            margin-bottom: 10px;
+        }
+
+        .summary .stats {
+            font-size: 1.2rem;
+            margin: 10px 0;
+        }
+
+        .summary .pass-count {
+            color: #00ff00;
+        }
+
+        .summary .fail-count {
+            color: #ff0000;
+        }
+
+        button {
+            background-color: #00ff00;
+            color: #000;
+            border: 2px solid #00ff00;
+            padding: 10px 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 10px 5px;
+            display: inline-block;
+        }
+
+        button:hover {
+            background-color: #000;
+            color: #00ff00;
+        }
+
+        .button-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .info {
+            color: #00dddd;
+            background-color: #001a1a;
+            padding: 15px;
+            margin: 20px 0;
+            border: 2px solid #006666;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>MAHOMET TRAIL TEST SUITE</h1>
+
+        <div class="info">
+            <p>This test suite validates the game logic, events, and mechanics.</p>
+        </div>
+
+        <div class="button-container">
+            <button id="run-tests">Run All Tests</button>
+            <button id="clear-results">Clear Results</button>
+        </div>
+
+        <div id="test-results"></div>
+
+        <div id="summary" class="summary" style="display: none;">
+            <h2>Test Summary</h2>
+            <div class="stats">
+                <span class="pass-count">Passed: <span id="pass-count">0</span></span> |
+                <span class="fail-count">Failed: <span id="fail-count">0</span></span> |
+                <span>Total: <span id="total-count">0</span></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load game data -->
+    <script src="gamedata.js"></script>
+    <script src="test.js"></script>
+</body>
+</html>

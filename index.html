@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mahomet Trail</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-container">
+        <!-- Title Screen -->
+        <div id="title-screen" class="screen active">
+            <div class="title-box">
+                <h1 class="game-title">MAHOMET TRAIL</h1>
+                <p class="subtitle">A 12-Mile Odyssey</p>
+                <div class="title-info">
+                    <p>Can you survive the treacherous journey</p>
+                    <p>from Champaign to Mahomet?</p>
+                    <p class="warning">Many have tried. Some succeeded.</p>
+                </div>
+                <button id="start-button" class="btn">Begin Your Journey</button>
+            </div>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="game-screen" class="screen">
+            <div class="game-header">
+                <h2 class="location">Champaign, IL → Mahomet, IL</h2>
+                <div class="progress-container">
+                    <div class="progress-label">
+                        <span>Progress: <span id="miles-traveled">0</span> / <span id="total-miles">12</span> miles</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div id="progress-fill" class="progress-fill"></div>
+                        <div class="van-icon">🚐</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Resources -->
+            <div class="resources">
+                <div class="resource">
+                    <span class="resource-label">⛽ Gas:</span>
+                    <div class="resource-bar">
+                        <div id="gas-bar" class="resource-fill" style="width: 100%"></div>
+                    </div>
+                    <span id="gas-value" class="resource-value">100</span>
+                </div>
+                <div class="resource">
+                    <span class="resource-label">🍿 Snacks:</span>
+                    <div class="resource-bar">
+                        <div id="snacks-bar" class="resource-fill" style="width: 100%"></div>
+                    </div>
+                    <span id="snacks-value" class="resource-value">100</span>
+                </div>
+                <div class="resource">
+                    <span class="resource-label">😌 Patience:</span>
+                    <div class="resource-bar">
+                        <div id="patience-bar" class="resource-fill" style="width: 100%"></div>
+                    </div>
+                    <span id="patience-value" class="resource-value">100</span>
+                </div>
+                <div class="resource">
+                    <span class="resource-label">🚐 Van Health:</span>
+                    <div class="resource-bar">
+                        <div id="van-bar" class="resource-fill" style="width: 100%"></div>
+                    </div>
+                    <span id="van-value" class="resource-value">100</span>
+                </div>
+            </div>
+
+            <!-- Event Box -->
+            <div id="event-box" class="event-box">
+                <h3 id="event-title" class="event-title">Your Journey Begins</h3>
+                <p id="event-text" class="event-text">You load up the minivan and pull out of your driveway. Mahomet awaits!</p>
+                <div id="event-effects" class="event-effects"></div>
+                <button id="continue-button" class="btn">Continue</button>
+            </div>
+
+            <!-- Log -->
+            <div class="log-container">
+                <h4>Journey Log:</h4>
+                <div id="log" class="log"></div>
+            </div>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="gameover-screen" class="screen">
+            <div class="gameover-box">
+                <h2 id="gameover-title" class="gameover-title">GAME OVER</h2>
+                <p id="gameover-text" class="gameover-text"></p>
+                <div id="gameover-stats" class="stats"></div>
+                <button id="restart-button" class="btn">Try Again</button>
+            </div>
+        </div>
+
+        <!-- Victory Screen -->
+        <div id="victory-screen" class="screen">
+            <div class="victory-box">
+                <h2 class="victory-title">🎉 VICTORY! 🎉</h2>
+                <div id="victory-messages" class="victory-messages"></div>
+                <div id="victory-stats" class="stats"></div>
+                <button id="play-again-button" class="btn">Play Again</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load game data and main game logic -->
+    <script src="gamedata.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>

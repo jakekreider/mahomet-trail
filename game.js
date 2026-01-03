@@ -340,7 +340,28 @@ let cameraRotation = { yaw: 0, pitch: 0 };
 let isPointerLocked = false;
 
 // Mobile controls
-let isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+// Check URL parameter for forcing mobile mode (for testing)
+const urlParams = new URLSearchParams(window.location.search);
+const forceMobile = urlParams.get('mobile') === 'true';
+
+let isMobile = forceMobile || (
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+    ('ontouchstart' in window) ||
+    (navigator.maxTouchPoints > 0)
+);
+
+// Log for debugging
+console.log('Mobile mode:', isMobile, '| Forced:', forceMobile, '| User Agent:', navigator.userAgent);
+
+// Add visual debug indicator
+if (isMobile) {
+    const indicator = document.createElement('div');
+    indicator.id = 'mobile-mode-indicator';
+    indicator.textContent = 'MOBILE MODE';
+    indicator.style.cssText = 'position: fixed; top: 5px; right: 5px; background: rgba(255,0,0,0.8); color: white; padding: 5px 10px; font-family: monospace; font-size: 12px; z-index: 9999; border-radius: 3px;';
+    document.body.appendChild(indicator);
+}
+
 let touchState = {
     moveTouch: null,
     lookTouch: null,

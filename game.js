@@ -351,7 +351,14 @@ let isMobile = forceMobile || (
 );
 
 // Log for debugging
-console.log('Mobile mode:', isMobile, '| Forced:', forceMobile, '| User Agent:', navigator.userAgent);
+console.log('========================================');
+console.log('MAHOMET TRAIL - HUNTING GAME LOADED');
+console.log('Mobile mode:', isMobile);
+console.log('Forced via URL:', forceMobile);
+console.log('User Agent:', navigator.userAgent);
+console.log('Touch support:', 'ontouchstart' in window);
+console.log('Max touch points:', navigator.maxTouchPoints);
+console.log('========================================');
 
 // Add visual debug indicator
 if (isMobile) {
@@ -360,6 +367,7 @@ if (isMobile) {
     indicator.textContent = 'MOBILE MODE';
     indicator.style.cssText = 'position: fixed; top: 5px; right: 5px; background: rgba(255,0,0,0.8); color: white; padding: 5px 10px; font-family: monospace; font-size: 12px; z-index: 9999; border-radius: 3px;';
     document.body.appendChild(indicator);
+    console.log('Mobile mode indicator added to page');
 }
 
 let touchState = {
@@ -396,6 +404,8 @@ const ANIMAL_TYPES = {
 
 // Initialize hunting scene
 function initHuntingScene() {
+    console.log('*** Initializing hunting scene - Mobile mode:', isMobile);
+
     huntingScene = new THREE.Scene();
     huntingScene.fog = new THREE.Fog(0x000000, 5, 15);
 
@@ -453,10 +463,13 @@ function initHuntingScene() {
 
         document.addEventListener('mousemove', onMouseMove);
     } else {
+        console.log('*** Setting up MOBILE touch controls');
+
         // Mobile touch controls
         canvas.addEventListener('touchstart', onTouchStart, { passive: false });
         canvas.addEventListener('touchmove', onTouchMove, { passive: false });
         canvas.addEventListener('touchend', onTouchEnd, { passive: false });
+        console.log('Touch event listeners added to canvas');
 
         // Prevent default touch behaviors globally during hunting
         document.addEventListener('touchmove', (e) => {
@@ -466,6 +479,7 @@ function initHuntingScene() {
         document.addEventListener('gesturestart', (e) => {
             if (huntingGameActive) e.preventDefault();
         });
+        console.log('Global touch prevention listeners added');
 
         // Hide pointer lock prompt on mobile
         const lockPrompt = document.getElementById('hunting-lock-prompt');
@@ -478,14 +492,25 @@ function initHuntingScene() {
         // Show mobile joystick and setup shoot button
         const joystick = document.getElementById('mobile-joystick');
         const shootBtn = document.getElementById('mobile-shoot-btn');
-        if (joystick) joystick.style.display = 'block';
+
+        if (joystick) {
+            joystick.style.display = 'block';
+            console.log('Mobile joystick shown');
+        } else {
+            console.error('Mobile joystick element not found!');
+        }
+
         if (shootBtn) {
             shootBtn.style.display = 'block';
             shootBtn.addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
+                console.log('Shoot button touched!');
                 onHuntingShoot();
             });
+            console.log('Mobile shoot button shown and event listener added');
+        } else {
+            console.error('Mobile shoot button element not found!');
         }
 
         // Update instructions for mobile
@@ -515,11 +540,15 @@ function onTouchStart(e) {
 
     const canvas = document.getElementById('hunting-canvas');
     const rect = canvas.getBoundingClientRect();
-    const midpoint = rect.width / 2;
+    const midpoint = window.innerWidth / 2;
+
+    console.log('Touch start - touches:', e.changedTouches.length);
 
     for (let i = 0; i < e.changedTouches.length; i++) {
         const touch = e.changedTouches[i];
-        const touchX = touch.clientX - rect.left;
+        const touchX = touch.clientX;
+
+        console.log('Touch X:', touchX, 'Midpoint:', midpoint, 'Is left side:', touchX < midpoint);
 
         if (touchX < midpoint) {
             // Left side - movement joystick
@@ -529,12 +558,14 @@ function onTouchStart(e) {
             const centerX = joystickRect.left + joystickRect.width / 2;
             const centerY = joystickRect.top + joystickRect.height / 2;
 
+            console.log('Joystick center:', centerX, centerY);
             updateJoystick(touch.clientX, touch.clientY, centerX, centerY);
         } else {
             // Right side - look around
             touchState.lookTouch = touch.identifier;
             touchState.lookStart.x = touch.clientX;
             touchState.lookStart.y = touch.clientY;
+            console.log('Look touch started');
         }
     }
 }
@@ -604,12 +635,17 @@ function updateJoystick(touchX, touchY, centerX, centerY) {
     touchState.moveVector.x = Math.cos(angle) * (clampedDistance / maxDistance);
     touchState.moveVector.y = Math.sin(angle) * (clampedDistance / maxDistance);
 
+    console.log('Joystick update - moveVector:', touchState.moveVector.x.toFixed(2), touchState.moveVector.y.toFixed(2));
+
     // Update joystick stick visual
     const stick = document.getElementById('mobile-joystick-stick');
     if (stick) {
         const stickX = Math.cos(angle) * clampedDistance;
         const stickY = Math.sin(angle) * clampedDistance;
         stick.style.transform = `translate(-50%, -50%) translate(${stickX}px, ${stickY}px)`;
+        console.log('Stick moved to:', stickX.toFixed(2), stickY.toFixed(2));
+    } else {
+        console.error('Joystick stick element not found!');
     }
 }
 
@@ -909,7 +945,11 @@ function updateHuntingHUD() {
 
 // Handle shooting
 function onHuntingShoot() {
-    if (!huntingGameActive || huntingAmmo <= 0 || !isPointerLocked) return;
+    // On mobile, we don't use pointer lock, so skip that check
+    if (!huntingGameActive || huntingAmmo <= 0) return;
+    if (!isMobile && !isPointerLocked) return;
+
+    console.log('SHOOT! Ammo before:', huntingAmmo);
 
     huntingAmmo--;
     updateHuntingHUD();
@@ -1117,6 +1157,11 @@ function animateHunting() {
         cameraVelocity.z += right.z * touchState.moveVector.x * touchMoveSpeed;
         cameraVelocity.x += forward.x * -touchState.moveVector.y * touchMoveSpeed;
         cameraVelocity.z += forward.z * -touchState.moveVector.y * touchMoveSpeed;
+
+        // Debug log (only log occasionally to avoid spam)
+        if (Math.random() < 0.01) {
+            console.log('Applying touch movement - velocity:', cameraVelocity.x.toFixed(3), cameraVelocity.z.toFixed(3));
+        }
     }
 
     // Apply camera movement with damping

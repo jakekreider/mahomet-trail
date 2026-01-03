@@ -527,7 +527,7 @@ body {
     border: 3px solid rgba(0, 255, 0, 0.4);
     border-radius: 50%;
     z-index: 15;
-    touch-action: none;
+    pointer-events: none; /* Let touches pass through to canvas */
 }
 
 .mobile-joystick-stick {

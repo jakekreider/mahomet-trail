@@ -364,8 +364,8 @@ console.log('========================================');
 if (isMobile) {
     const indicator = document.createElement('div');
     indicator.id = 'mobile-mode-indicator';
-    indicator.textContent = 'MOBILE MODE';
-    indicator.style.cssText = 'position: fixed; top: 5px; right: 5px; background: rgba(255,0,0,0.8); color: white; padding: 5px 10px; font-family: monospace; font-size: 12px; z-index: 9999; border-radius: 3px;';
+    indicator.textContent = '📱';
+    indicator.style.cssText = 'position: fixed; bottom: 5px; right: 5px; font-size: 16px; z-index: 9999; opacity: 0.5;';
     document.body.appendChild(indicator);
     console.log('Mobile mode indicator added to page');
 }
@@ -1251,7 +1251,7 @@ function animateHunting() {
 
     // Apply movement from touch joystick (mobile)
     if (isMobile && touchState.moveTouch !== null) {
-        const touchMoveSpeed = 0.2;
+        const touchMoveSpeed = 0.08; // Slower for better control on mobile
         cameraVelocity.x += right.x * touchState.moveVector.x * touchMoveSpeed;
         cameraVelocity.z += right.z * touchState.moveVector.x * touchMoveSpeed;
         cameraVelocity.x += forward.x * -touchState.moveVector.y * touchMoveSpeed;

@@ -466,10 +466,95 @@ function initHuntingScene() {
         console.log('*** Setting up MOBILE touch controls');
 
         // Mobile touch controls
-        canvas.addEventListener('touchstart', onTouchStart, { passive: false });
-        canvas.addEventListener('touchmove', onTouchMove, { passive: false });
-        canvas.addEventListener('touchend', onTouchEnd, { passive: false });
+        canvas.addEventListener('touchstart', (e) => {
+            console.log('RAW touchstart event on canvas!', e.touches.length);
+            onTouchStart(e);
+        }, { passive: false });
+
+        canvas.addEventListener('touchmove', (e) => {
+            console.log('RAW touchmove event on canvas!');
+            onTouchMove(e);
+        }, { passive: false });
+
+        canvas.addEventListener('touchend', (e) => {
+            console.log('RAW touchend event on canvas!');
+            onTouchEnd(e);
+        }, { passive: false });
+
         console.log('Touch event listeners added to canvas');
+
+        // Also test if we can capture touches on the whole document
+        document.addEventListener('touchstart', (e) => {
+            console.log('RAW touchstart on DOCUMENT!', e.target.id || e.target.tagName);
+        }, { passive: false });
+
+        // DESKTOP TESTING: Add mouse events that simulate touch for testing on desktop
+        if (forceMobile) {
+            console.log('*** Adding MOUSE events for desktop testing (mobile mode forced via URL)');
+
+            let mouseDown = false;
+            let mouseTouchId = 'mouse';
+
+            canvas.addEventListener('mousedown', (e) => {
+                console.log('MOUSE DOWN on canvas - simulating touch!');
+                mouseDown = true;
+
+                // Create fake touch event
+                const fakeTouch = {
+                    identifier: mouseTouchId,
+                    clientX: e.clientX,
+                    clientY: e.clientY
+                };
+
+                const fakeTouchEvent = {
+                    preventDefault: () => e.preventDefault(),
+                    changedTouches: [fakeTouch],
+                    touches: [fakeTouch]
+                };
+
+                onTouchStart(fakeTouchEvent);
+            });
+
+            canvas.addEventListener('mousemove', (e) => {
+                if (!mouseDown) return;
+
+                const fakeTouch = {
+                    identifier: mouseTouchId,
+                    clientX: e.clientX,
+                    clientY: e.clientY
+                };
+
+                const fakeTouchEvent = {
+                    preventDefault: () => e.preventDefault(),
+                    changedTouches: [fakeTouch],
+                    touches: [fakeTouch]
+                };
+
+                onTouchMove(fakeTouchEvent);
+            });
+
+            canvas.addEventListener('mouseup', (e) => {
+                if (!mouseDown) return;
+                console.log('MOUSE UP on canvas');
+                mouseDown = false;
+
+                const fakeTouch = {
+                    identifier: mouseTouchId,
+                    clientX: e.clientX,
+                    clientY: e.clientY
+                };
+
+                const fakeTouchEvent = {
+                    preventDefault: () => e.preventDefault(),
+                    changedTouches: [fakeTouch],
+                    touches: []
+                };
+
+                onTouchEnd(fakeTouchEvent);
+            });
+
+            console.log('Mouse simulation events added for desktop testing');
+        }
 
         // Prevent default touch behaviors globally during hunting
         document.addEventListener('touchmove', (e) => {
@@ -502,13 +587,27 @@ function initHuntingScene() {
 
         if (shootBtn) {
             shootBtn.style.display = 'block';
+
+            // Try both touchstart and click
             shootBtn.addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                console.log('Shoot button touched!');
+                console.log('🔫 Shoot button TOUCHSTART!');
                 onHuntingShoot();
             });
-            console.log('Mobile shoot button shown and event listener added');
+
+            shootBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                console.log('🔫 Shoot button CLICK!');
+                onHuntingShoot();
+            });
+
+            // Test if it's even clickable
+            shootBtn.style.pointerEvents = 'auto';
+            console.log('Mobile shoot button shown and event listeners added');
+            console.log('Shoot button element:', shootBtn);
+            console.log('Shoot button style.display:', shootBtn.style.display);
+            console.log('Shoot button bounding rect:', shootBtn.getBoundingClientRect());
         } else {
             console.error('Mobile shoot button element not found!');
         }

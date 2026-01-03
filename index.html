@@ -103,9 +103,52 @@
                 <button id="play-again-button" class="btn">Play Again</button>
             </div>
         </div>
+
+        <!-- Hunting Mini-game Overlay -->
+        <div id="hunting-overlay" class="hunting-overlay">
+            <canvas id="hunting-canvas"></canvas>
+
+            <div id="hunting-crosshair"></div>
+
+            <div id="hunting-hud">
+                <div class="hunting-hud-panel">
+                    <div class="hunting-hud-item">TIME: <span id="hunting-timer">30</span>s</div>
+                    <div class="hunting-hud-item">AMMO: <span id="hunting-ammo">10</span></div>
+                </div>
+                <div class="hunting-hud-panel">
+                    <div class="hunting-hud-item">🐿️ Squirrels: <span id="squirrel-count">0</span></div>
+                    <div class="hunting-hud-item">🦌 Deer: <span id="deer-count">0</span></div>
+                    <div class="hunting-hud-item">🐱 Cats: <span id="cat-count">0</span></div>
+                </div>
+            </div>
+
+            <div id="hunting-instructions">
+                Click to lock mouse | WASD to move | Mouse to aim | Click to shoot | ESC to unlock
+            </div>
+
+            <div id="hunting-lock-prompt">
+                Click to Start Hunting
+            </div>
+
+            <div id="hunting-result-screen">
+                <div class="hunting-result-box">
+                    <div class="hunting-result-title">HUNTING COMPLETE</div>
+                    <div class="hunting-result-stats">
+                        <div>🐿️ Squirrels Shot: <span id="final-squirrels">0</span></div>
+                        <div>🦌 Deer Shot: <span id="final-deer">0</span></div>
+                        <div>🐱 Cats Shot: <span id="final-cats">0</span></div>
+                    </div>
+                    <div class="hunting-snacks-gained">
+                        Snacks Gained: +<span id="snacks-amount">0</span>
+                    </div>
+                    <button class="btn" id="hunting-continue-btn">Continue Journey</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Load game data and main game logic -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="gamedata.js"></script>
     <script src="game.js"></script>
 </body>

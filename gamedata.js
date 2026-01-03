@@ -36,7 +36,7 @@ const gameData = {
             id: "slow_farmer",
             type: "minor_negative",
             title: "Leisurely Tractor",
-            text: "A farmer pulls in front of you and drives 5mph in his tractor.",
+            text: "A farmer pulls in front of you and drives 5mph in his tractor. Bro country blasts from his speakers.",
             effects: { patience: -5, gas: -10 },
             weight: 8
         },
@@ -44,7 +44,7 @@ const gameData = {
             id: "smooth_sailing",
             type: "positive",
             title: "Clear Road",
-            text: "The road is clear and smooth. You make good progress.",
+            text: "The road is clear and smooth, with only sporadic orange barrels. You make good progress.",
             effects: { gas: -5 },
             weight: 15
         },
@@ -54,7 +54,7 @@ const gameData = {
             id: "pothole",
             type: "minor_negative",
             title: "Pothole!",
-            text: "You hit a massive pothole. This is Illinois, after all.",
+            text: "You hit a massive pothole. Your van rattles violently.",
             effects: { van_health: -10, patience: -5 },
             weight: 12
         },
@@ -70,7 +70,7 @@ const gameData = {
             id: "kids_fighting",
             type: "minor_negative",
             title: "Kids Are Fighting",
-            text: "The kids in the backseat are arguing about who gets to pick the music.",
+            text: "The kids in the backseat are arguing about 6-7 or something, you're not really sure.",
             effects: { patience: -20 },
             weight: 8
         },
@@ -83,18 +83,10 @@ const gameData = {
             weight: 5
         },
         {
-            id: "low_gas",
-            type: "minor_negative",
-            title: "Low Fuel Warning",
-            text: "The gas light comes on. Should've filled up before leaving.",
-            effects: { gas: -20, patience: -10 },
-            weight: 8
-        },
-        {
             id: "spilled_drink",
             type: "minor_negative",
             title: "Spilled Drink",
-            text: "Someone knocked over their soda in the cupholder. It's dripping everywhere.",
+            text: "Someone knocked over their latte in the cupholder. It's dripping everywhere. It will surely smell.",
             effects: { patience: -10, van_health: -5 },
             weight: 7
         },
@@ -104,7 +96,7 @@ const gameData = {
             id: "flat_tire",
             type: "major_negative",
             title: "Flat Tire!",
-            text: "You hear a loud POP. Great, a flat tire in the middle of nowhere.",
+            text: "You hear a loud POP. Great, a flat tire in the middle of Champaign County.",
             effects: { van_health: -25, patience: -25, gas: -10 },
             weight: 4
         },
@@ -128,7 +120,7 @@ const gameData = {
             id: "deer_crossing",
             type: "major_negative",
             title: "Deer in the Road!",
-            text: "A deer jumps out! You swerve and barely avoid it, but your nerves are shot.",
+            text: "A deer jumps out! You swerve and barely avoid it, but your nerves are shot. The deer didn't even apologize.",
             effects: { patience: -25, gas: -15 },
             weight: 6
         },
@@ -136,7 +128,7 @@ const gameData = {
             id: "hungry_kids",
             type: "minor_negative",
             title: "\"I'm Hungry!\"",
-            text: "The kids are hungry. Again. You just fed them 20 minutes ago.",
+            text: "The kids are hungry. Again. You just fed them 20 minutes ago. Goldfish crackers have no nutritional value.",
             effects: { snacks: -20, patience: -10 },
             weight: 10
         },
@@ -152,7 +144,7 @@ const gameData = {
             id: "train_crossing",
             type: "minor_negative",
             title: "Train Crossing",
-            text: "A freight train blocks your path. You count 87 cars. Still counting...",
+            text: "A freight train blocks your path. You count 87 cars. It appears to be slowing down.",
             effects: { patience: -20, gas: -10 },
             weight: 8
         },

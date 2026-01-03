@@ -24,7 +24,6 @@ const buttons = {
 
 // Initialize game
 function init() {
-    // gameData is already loaded from gamedata.js
     console.log('Game initialized with data:', gameData);
     setupEventListeners();
 }
@@ -39,7 +38,6 @@ function setupEventListeners() {
 
 // Start new game
 function startGame() {
-    // Initialize game state
     gameState = {
         resources: { ...gameData.starting_resources },
         distance: 0,
@@ -48,10 +46,10 @@ function startGame() {
         log: []
     };
 
-    // Switch to game screen
-    showScreen('game');
+    // Reset hunting trigger flag
+    huntingHasTriggered = false;
 
-    // Initialize UI
+    showScreen('game');
     updateUI();
     addLogEntry('Your journey begins...', 'important');
 }
@@ -60,42 +58,59 @@ function startGame() {
 function continueJourney() {
     if (gameState.isGameOver) return;
 
-    // Check for critical conditions first
     const criticalEvent = checkCriticalConditions();
     if (criticalEvent) {
         handleCriticalEvent(criticalEvent);
         return;
     }
 
-    // Progress distance
-    const progressAmount = Math.random() * 2 + 0.5; // 0.5-2.5 miles per step
+    const previousDistance = gameState.distance;
+    const progressAmount = Math.random() * 2 + 0.5;
     gameState.distance += progressAmount;
 
-    // Check if reached destination
+    // Check if we crossed the halfway point (6 miles) and haven't triggered hunting yet
+    const halfwayPoint = gameState.totalDistance / 2;
+    if (!huntingHasTriggered && previousDistance < halfwayPoint && gameState.distance >= halfwayPoint) {
+        huntingHasTriggered = true;
+        triggerMandatoryHunting();
+        return;
+    }
+
     if (gameState.distance >= gameState.totalDistance) {
         victory();
         return;
     }
 
-    // Trigger random event
     const event = getRandomEvent();
 
-    // Check if this is a custom event with dynamic logic
     if (event.customEvent && typeof customEvents !== 'undefined' && customEvents[event.id]) {
         const customResult = customEvents[event.id](gameState, event);
-
-        // Merge custom results into the event
-        if (customResult.text) {
-            event.text = customResult.text;
-        }
-        if (customResult.effects) {
-            event.effects = customResult.effects;
-        }
+        if (customResult.text) event.text = customResult.text;
+        if (customResult.effects) event.effects = customResult.effects;
     }
 
     displayEvent(event);
     applyEventEffects(event);
     updateUI();
+}
+
+// Trigger mandatory hunting at halfway point
+function triggerMandatoryHunting() {
+    const titleEl = document.getElementById('event-title');
+    const textEl = document.getElementById('event-text');
+    const effectsEl = document.getElementById('event-effects');
+
+    titleEl.textContent = "Halfway There!";
+    textEl.textContent = "You've reached the halfway point. Time to hunt for supplies!";
+    effectsEl.innerHTML = '';
+
+    addLogEntry('Reached halfway point - hunting time!', 'important');
+    updateUI();
+
+    // Auto-start hunting after a short delay
+    setTimeout(() => {
+        showHuntingOverlay();
+    }, 1500);
 }
 
 // Check for critical conditions (game over conditions)
@@ -137,11 +152,7 @@ function handleCriticalEvent(event) {
 // Get random event based on weights
 function getRandomEvent() {
     const availableEvents = gameData.events.filter(e => e.type !== 'critical');
-
-    // Calculate total weight
     const totalWeight = availableEvents.reduce((sum, event) => sum + event.weight, 0);
-
-    // Random selection based on weight
     let random = Math.random() * totalWeight;
 
     for (let event of availableEvents) {
@@ -151,7 +162,7 @@ function getRandomEvent() {
         }
     }
 
-    return availableEvents[0]; // Fallback
+    return availableEvents[0];
 }
 
 // Display event in UI
@@ -163,7 +174,11 @@ function displayEvent(event) {
     titleEl.textContent = event.title;
     textEl.textContent = event.text;
 
-    // Display effects
+    // Don't show effects for special events
+    if (event.special === 'hunting') {
+        return;
+    }
+
     effectsEl.innerHTML = '';
     if (event.effects && Object.keys(event.effects).length > 0) {
         for (let [resource, value] of Object.entries(event.effects)) {
@@ -176,7 +191,6 @@ function displayEvent(event) {
         }
     }
 
-    // Log event
     addLogEntry(event.title, event.type.includes('negative') ? 'negative' : '');
 }
 
@@ -187,7 +201,6 @@ function applyEventEffects(event) {
     for (let [resource, value] of Object.entries(event.effects)) {
         if (gameState.resources.hasOwnProperty(resource)) {
             gameState.resources[resource] += value;
-            // Clamp between 0 and 100
             gameState.resources[resource] = Math.max(0, Math.min(100, gameState.resources[resource]));
         }
     }
@@ -223,7 +236,6 @@ function updateResources() {
             barEl.style.width = `${percentage}%`;
             valueEl.textContent = Math.round(value);
 
-            // Add warning/critical classes
             barEl.classList.remove('warning', 'critical');
             if (value <= 20) {
                 barEl.classList.add('critical');
@@ -242,10 +254,8 @@ function addLogEntry(text, className = '') {
     entry.textContent = `> ${text}`;
     logEl.appendChild(entry);
 
-    // Auto-scroll to bottom
     logEl.scrollTop = logEl.scrollHeight;
 
-    // Keep log size manageable
     while (logEl.children.length > 20) {
         logEl.removeChild(logEl.firstChild);
     }
@@ -264,7 +274,6 @@ function victory() {
         messagesEl.appendChild(p);
     });
 
-    // Show stats
     const statsEl = document.getElementById('victory-stats');
     statsEl.innerHTML = `
         <p>Final Stats:</p>
@@ -301,8 +310,6 @@ function gameOver(event) {
 // Reset game
 function resetGame() {
     showScreen('title');
-
-    // Clear log
     document.getElementById('log').innerHTML = '';
 }
 
@@ -314,3 +321,713 @@ function showScreen(screenName) {
 
 // Initialize when page loads
 window.addEventListener('DOMContentLoaded', init);
+
+// ============================================================================
+// HUNTING MINI-GAME
+// ============================================================================
+
+let huntingScene, huntingCamera, huntingRenderer;
+let animals = [];
+let huntingGameActive = false;
+let huntingTimeRemaining = 30;
+let huntingAmmo = 10;
+let huntingKills = { squirrels: 0, deer: 0, cats: 0 };
+let huntingRaycaster, huntingMouse;
+let huntingHasTriggered = false;
+let huntingKeys = { w: false, a: false, s: false, d: false };
+let cameraVelocity = { x: 0, z: 0 };
+let cameraRotation = { yaw: 0, pitch: 0 };
+let isPointerLocked = false;
+
+// Animal types with their properties
+const ANIMAL_TYPES = {
+    squirrel: {
+        emoji: '🐿️',
+        scale: 0.3,
+        speed: 0.06,
+        snackValue: 5,
+        spawnWeight: 70
+    },
+    deer: {
+        emoji: '🦌',
+        scale: 0.5,
+        speed: 0.04,
+        snackValue: 15,
+        spawnWeight: 20
+    },
+    cat: {
+        emoji: '🐱',
+        scale: 0.35,
+        speed: 0.08,
+        snackValue: -10,
+        spawnWeight: 10
+    }
+};
+
+// Initialize hunting scene
+function initHuntingScene() {
+    huntingScene = new THREE.Scene();
+    huntingScene.fog = new THREE.Fog(0x000000, 5, 15);
+
+    huntingCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    huntingCamera.position.z = 5;
+
+    const canvas = document.getElementById('hunting-canvas');
+    huntingRenderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    huntingRenderer.setSize(window.innerWidth, window.innerHeight);
+    huntingRenderer.setClearColor(0x000000);
+
+    huntingRaycaster = new THREE.Raycaster();
+    huntingMouse = new THREE.Vector2();
+
+    createHuntingGround();
+    addHuntingScenery();
+
+    window.addEventListener('resize', onHuntingWindowResize);
+
+    // Keyboard controls
+    document.addEventListener('keydown', onHuntingKeyDown);
+    document.addEventListener('keyup', onHuntingKeyUp);
+
+    // Pointer lock for mouse look
+    canvas.addEventListener('click', () => {
+        if (!isPointerLocked) {
+            canvas.requestPointerLock();
+        } else {
+            onHuntingShoot();
+        }
+    });
+
+    let timerStarted = false;
+    document.addEventListener('pointerlockchange', () => {
+        const wasLocked = isPointerLocked;
+        isPointerLocked = document.pointerLockElement === canvas;
+        const lockPrompt = document.getElementById('hunting-lock-prompt');
+        const crosshair = document.getElementById('hunting-crosshair');
+
+        if (isPointerLocked) {
+            lockPrompt.classList.add('hidden');
+            crosshair.classList.add('active');
+
+            // Start timer on first lock
+            if (huntingGameActive && !timerStarted) {
+                timerStarted = true;
+                startHuntingTimer();
+            }
+        } else if (huntingGameActive) {
+            lockPrompt.classList.remove('hidden');
+            crosshair.classList.remove('active');
+        }
+    });
+
+    document.addEventListener('mousemove', onMouseMove);
+}
+
+// Mouse movement handler
+function onMouseMove(e) {
+    if (!isPointerLocked || !huntingGameActive) return;
+
+    const sensitivity = 0.002;
+    cameraRotation.yaw -= e.movementX * sensitivity;
+    cameraRotation.pitch -= e.movementY * sensitivity;
+
+    // Clamp pitch to prevent camera flipping
+    cameraRotation.pitch = Math.max(-Math.PI / 3, Math.min(Math.PI / 3, cameraRotation.pitch));
+}
+
+// Create ground reference
+function createHuntingGround() {
+    const groundGeometry = new THREE.PlaneGeometry(20, 20, 10, 10);
+    const groundMaterial = new THREE.MeshBasicMaterial({
+        color: 0x003300,
+        wireframe: true,
+        opacity: 0.3,
+        transparent: true
+    });
+    const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = -2;
+    huntingScene.add(ground);
+}
+
+// Create a tree
+function createHuntingTree(x, z) {
+    const tree = new THREE.Group();
+    const material = new THREE.LineBasicMaterial({ color: 0x006600, linewidth: 2 });
+
+    const trunkGeometry = new THREE.CylinderGeometry(0.2, 0.3, 2, 6);
+    const trunkEdges = new THREE.EdgesGeometry(trunkGeometry);
+    const trunk = new THREE.LineSegments(trunkEdges, material);
+    trunk.position.y = 0;
+
+    const foliageMaterial = new THREE.LineBasicMaterial({ color: 0x00aa00, linewidth: 2 });
+
+    const foliage1Geometry = new THREE.ConeGeometry(1, 1.5, 8);
+    const foliage1Edges = new THREE.EdgesGeometry(foliage1Geometry);
+    const foliage1 = new THREE.LineSegments(foliage1Edges, foliageMaterial);
+    foliage1.position.y = 1.5;
+
+    const foliage2Geometry = new THREE.ConeGeometry(0.8, 1.2, 8);
+    const foliage2Edges = new THREE.EdgesGeometry(foliage2Geometry);
+    const foliage2 = new THREE.LineSegments(foliage2Edges, foliageMaterial);
+    foliage2.position.y = 2.3;
+
+    const foliage3Geometry = new THREE.ConeGeometry(0.6, 1, 8);
+    const foliage3Edges = new THREE.EdgesGeometry(foliage3Geometry);
+    const foliage3 = new THREE.LineSegments(foliage3Edges, foliageMaterial);
+    foliage3.position.y = 3;
+
+    tree.add(trunk);
+    tree.add(foliage1);
+    tree.add(foliage2);
+    tree.add(foliage3);
+
+    tree.position.set(x, -2, z);
+    return tree;
+}
+
+// Add scenery trees
+function addHuntingScenery() {
+    huntingScene.add(createHuntingTree(-8, -3));
+    huntingScene.add(createHuntingTree(-6, -5));
+    huntingScene.add(createHuntingTree(-9, -7));
+    huntingScene.add(createHuntingTree(-7, -2));
+
+    huntingScene.add(createHuntingTree(8, -4));
+    huntingScene.add(createHuntingTree(6, -6));
+    huntingScene.add(createHuntingTree(9, -3));
+    huntingScene.add(createHuntingTree(7, -8));
+
+    huntingScene.add(createHuntingTree(-4, -9));
+    huntingScene.add(createHuntingTree(4, -10));
+    huntingScene.add(createHuntingTree(0, -11));
+}
+
+// Create an animal mesh
+function createHuntingAnimal(type) {
+    const properties = ANIMAL_TYPES[type];
+    const material = new THREE.LineBasicMaterial({ color: 0x00ff00, linewidth: 2 });
+    const animal = new THREE.Group();
+
+    if (type === 'squirrel') {
+        const bodyGeometry = new THREE.SphereGeometry(0.5, 8, 8);
+        const bodyEdges = new THREE.EdgesGeometry(bodyGeometry);
+        const body = new THREE.LineSegments(bodyEdges, material);
+
+        const headGeometry = new THREE.SphereGeometry(0.3, 6, 6);
+        const headEdges = new THREE.EdgesGeometry(headGeometry);
+        const head = new THREE.LineSegments(headEdges, material);
+        head.position.set(0, 0.6, 0.3);
+
+        const tailGeometry = new THREE.ConeGeometry(0.4, 1.2, 6);
+        const tailEdges = new THREE.EdgesGeometry(tailGeometry);
+        const tail = new THREE.LineSegments(tailEdges, material);
+        tail.position.set(0, 0.3, -0.7);
+        tail.rotation.x = Math.PI / 3;
+
+        animal.add(body);
+        animal.add(head);
+        animal.add(tail);
+
+    } else if (type === 'deer') {
+        const bodyGeometry = new THREE.BoxGeometry(1.2, 0.8, 0.6);
+        const bodyEdges = new THREE.EdgesGeometry(bodyGeometry);
+        const body = new THREE.LineSegments(bodyEdges, material);
+
+        const headGeometry = new THREE.BoxGeometry(0.4, 0.5, 0.5);
+        const headEdges = new THREE.EdgesGeometry(headGeometry);
+        const head = new THREE.LineSegments(headEdges, material);
+        head.position.set(0, 0.8, 0.6);
+
+        const antlerGeometry = new THREE.CylinderGeometry(0.05, 0.05, 0.8, 4);
+        const antlerEdges = new THREE.EdgesGeometry(antlerGeometry);
+
+        const antlerLeft = new THREE.LineSegments(antlerEdges, material);
+        antlerLeft.position.set(-0.2, 1.3, 0.6);
+        antlerLeft.rotation.z = -Math.PI / 6;
+
+        const antlerRight = new THREE.LineSegments(antlerEdges, material);
+        antlerRight.position.set(0.2, 1.3, 0.6);
+        antlerRight.rotation.z = Math.PI / 6;
+
+        const legGeometry = new THREE.CylinderGeometry(0.1, 0.1, 0.6, 4);
+        const legEdges = new THREE.EdgesGeometry(legGeometry);
+
+        for (let i = 0; i < 4; i++) {
+            const leg = new THREE.LineSegments(legEdges.clone(), material);
+            const x = i % 2 === 0 ? -0.4 : 0.4;
+            const z = i < 2 ? 0.2 : -0.2;
+            leg.position.set(x, -0.7, z);
+            animal.add(leg);
+        }
+
+        animal.add(body);
+        animal.add(head);
+        animal.add(antlerLeft);
+        animal.add(antlerRight);
+
+    } else if (type === 'cat') {
+        const bodyGeometry = new THREE.BoxGeometry(0.8, 0.4, 0.5);
+        const bodyEdges = new THREE.EdgesGeometry(bodyGeometry);
+        const body = new THREE.LineSegments(bodyEdges, material);
+
+        const headGeometry = new THREE.SphereGeometry(0.3, 6, 6);
+        const headEdges = new THREE.EdgesGeometry(headGeometry);
+        const head = new THREE.LineSegments(headEdges, material);
+        head.position.set(0, 0.3, 0.5);
+
+        const earGeometry = new THREE.ConeGeometry(0.15, 0.3, 4);
+        const earEdges = new THREE.EdgesGeometry(earGeometry);
+
+        const earLeft = new THREE.LineSegments(earEdges, material);
+        earLeft.position.set(-0.15, 0.6, 0.5);
+
+        const earRight = new THREE.LineSegments(earEdges, material);
+        earRight.position.set(0.15, 0.6, 0.5);
+
+        const tailGeometry = new THREE.CylinderGeometry(0.08, 0.12, 0.9, 4);
+        const tailEdges = new THREE.EdgesGeometry(tailGeometry);
+        const tail = new THREE.LineSegments(tailEdges, material);
+        tail.position.set(0, 0.2, -0.6);
+        tail.rotation.x = Math.PI / 4;
+
+        animal.add(body);
+        animal.add(head);
+        animal.add(earLeft);
+        animal.add(earRight);
+        animal.add(tail);
+    }
+
+    animal.scale.set(properties.scale, properties.scale, properties.scale);
+
+    // Spawn animals in a circle around the player at various distances
+    const angle = Math.random() * Math.PI * 2;
+    const distance = 10 + Math.random() * 15; // Spawn 10-25 units away
+    animal.position.x = Math.cos(angle) * distance;
+    animal.position.y = -1 + Math.random() * 2; // Height variation from -1 to 1
+    animal.position.z = Math.sin(angle) * distance;
+
+    // Animals move in random directions (but generally wandering)
+    const moveAngle = Math.random() * Math.PI * 2;
+    const moveSpeed = properties.speed * (0.8 + Math.random() * 0.4);
+
+    animal.userData = {
+        type: type,
+        velocity: {
+            x: Math.cos(moveAngle) * moveSpeed,
+            z: Math.sin(moveAngle) * moveSpeed
+        },
+        bobPhase: Math.random() * Math.PI * 2,
+        killed: false
+    };
+
+    return animal;
+}
+
+// Spawn animal
+function spawnHuntingAnimal() {
+    if (!huntingGameActive) return;
+
+    const rand = Math.random() * 100;
+    let type;
+
+    if (rand < ANIMAL_TYPES.squirrel.spawnWeight) {
+        type = 'squirrel';
+    } else if (rand < ANIMAL_TYPES.squirrel.spawnWeight + ANIMAL_TYPES.deer.spawnWeight) {
+        type = 'deer';
+    } else {
+        type = 'cat';
+    }
+
+    const animal = createHuntingAnimal(type);
+    huntingScene.add(animal);
+    animals.push(animal);
+}
+
+// Start hunting game
+function startHuntingGame() {
+    if (!huntingScene) {
+        initHuntingScene();
+    }
+
+    huntingGameActive = true;
+    huntingTimeRemaining = 30;
+    huntingAmmo = 10;
+    huntingKills = { squirrels: 0, deer: 0, cats: 0 };
+    animals = [];
+
+    // Reset camera position and movement
+    huntingCamera.position.set(0, 0, 5);
+    cameraVelocity = { x: 0, z: 0 };
+    cameraRotation = { yaw: 0, pitch: 0 };
+    huntingKeys = { w: false, a: false, s: false, d: false };
+    isPointerLocked = false;
+
+    // Show lock prompt
+    const lockPrompt = document.getElementById('hunting-lock-prompt');
+    lockPrompt.classList.remove('hidden');
+
+    updateHuntingHUD();
+
+    // Timer and spawning will start when pointer is locked
+    animateHunting();
+}
+
+// Start timer and spawning (called when pointer locks)
+function startHuntingTimer() {
+    const timerInterval = setInterval(() => {
+        if (!huntingGameActive) {
+            clearInterval(timerInterval);
+            return;
+        }
+
+        huntingTimeRemaining--;
+        updateHuntingHUD();
+
+        if (huntingTimeRemaining <= 0) {
+            endHuntingGame();
+            clearInterval(timerInterval);
+        }
+    }, 1000);
+
+    const spawnInterval = setInterval(() => {
+        if (!huntingGameActive) {
+            clearInterval(spawnInterval);
+            return;
+        }
+        spawnHuntingAnimal();
+    }, 1200);
+
+    // Initial spawns spread out
+    for (let i = 0; i < 5; i++) {
+        setTimeout(() => spawnHuntingAnimal(), i * 400);
+    }
+}
+
+// Update hunting HUD
+function updateHuntingHUD() {
+    document.getElementById('hunting-timer').textContent = huntingTimeRemaining;
+    const ammoEl = document.getElementById('hunting-ammo');
+    ammoEl.textContent = huntingAmmo;
+    ammoEl.className = huntingAmmo <= 3 ? 'low' : '';
+
+    document.getElementById('squirrel-count').textContent = huntingKills.squirrels;
+    document.getElementById('deer-count').textContent = huntingKills.deer;
+    document.getElementById('cat-count').textContent = huntingKills.cats;
+}
+
+// Handle shooting
+function onHuntingShoot() {
+    if (!huntingGameActive || huntingAmmo <= 0 || !isPointerLocked) return;
+
+    huntingAmmo--;
+    updateHuntingHUD();
+
+    // Shoot from center of screen (where camera is looking)
+    huntingMouse.x = 0;
+    huntingMouse.y = 0;
+
+    huntingRaycaster.setFromCamera(huntingMouse, huntingCamera);
+
+    const intersects = huntingRaycaster.intersectObjects(animals, true);
+
+    // Create bullet tracer
+    createBulletTracer(huntingRaycaster, intersects);
+
+    if (intersects.length > 0) {
+        let hitObject = intersects[0].object;
+        while (hitObject.parent && !hitObject.userData.type) {
+            hitObject = hitObject.parent;
+        }
+
+        if (hitObject.userData && hitObject.userData.type && !hitObject.userData.killed) {
+            killHuntingAnimal(hitObject);
+        }
+    }
+
+    if (huntingAmmo <= 0) {
+        endHuntingGame();
+    }
+}
+
+// Create bullet tracer effect
+function createBulletTracer(raycaster, intersects) {
+    const start = huntingCamera.position.clone();
+
+    // Move start point slightly forward from camera
+    const gunOffset = raycaster.ray.direction.clone().multiplyScalar(1);
+    start.add(gunOffset);
+
+    // Determine end point
+    let end;
+    if (intersects.length > 0) {
+        end = intersects[0].point.clone();
+    } else {
+        // If no hit, extend ray far out
+        end = start.clone().add(raycaster.ray.direction.clone().multiplyScalar(100));
+    }
+
+    // Calculate distance and create cylinder for tracer
+    const distance = start.distanceTo(end);
+    const tracerGeometry = new THREE.CylinderGeometry(0.02, 0.02, distance, 8);
+    const tracerMaterial = new THREE.MeshBasicMaterial({
+        color: 0xffff00,
+        transparent: true,
+        opacity: 1
+    });
+    const tracer = new THREE.Mesh(tracerGeometry, tracerMaterial);
+
+    // Position and orient the tracer
+    tracer.position.copy(start).lerp(end, 0.5);
+    tracer.quaternion.setFromUnitVectors(
+        new THREE.Vector3(0, 1, 0),
+        end.clone().sub(start).normalize()
+    );
+
+    huntingScene.add(tracer);
+
+    // Create muzzle flash (multiple spheres for effect)
+    const flashGroup = new THREE.Group();
+
+    // Main flash
+    const flashGeometry1 = new THREE.SphereGeometry(0.2, 8, 8);
+    const flashMaterial1 = new THREE.MeshBasicMaterial({
+        color: 0xffff00,
+        transparent: true,
+        opacity: 1
+    });
+    const flash1 = new THREE.Mesh(flashGeometry1, flashMaterial1);
+    flashGroup.add(flash1);
+
+    // Outer glow
+    const flashGeometry2 = new THREE.SphereGeometry(0.35, 8, 8);
+    const flashMaterial2 = new THREE.MeshBasicMaterial({
+        color: 0xffaa00,
+        transparent: true,
+        opacity: 0.6
+    });
+    const flash2 = new THREE.Mesh(flashGeometry2, flashMaterial2);
+    flashGroup.add(flash2);
+
+    flashGroup.position.copy(start);
+    huntingScene.add(flashGroup);
+
+    // Fade out and remove
+    let opacity = 1;
+    let frame = 0;
+    const fadeInterval = setInterval(() => {
+        frame++;
+        opacity -= 0.2;
+        tracerMaterial.opacity = opacity;
+        flashMaterial1.opacity = opacity;
+        flashMaterial2.opacity = opacity * 0.6;
+
+        if (opacity <= 0 || frame > 10) {
+            huntingScene.remove(tracer);
+            huntingScene.remove(flashGroup);
+            tracerGeometry.dispose();
+            tracerMaterial.dispose();
+            flashGeometry1.dispose();
+            flashMaterial1.dispose();
+            flashGeometry2.dispose();
+            flashMaterial2.dispose();
+            clearInterval(fadeInterval);
+        }
+    }, 30);
+}
+
+// Kill an animal
+function killHuntingAnimal(animal) {
+    animal.userData.killed = true;
+
+    const type = animal.userData.type;
+    if (type === 'squirrel') huntingKills.squirrels++;
+    else if (type === 'deer') huntingKills.deer++;
+    else if (type === 'cat') huntingKills.cats++;
+
+    updateHuntingHUD();
+
+    animal.children.forEach(child => {
+        if (child.material) {
+            child.material.color.setHex(0xff0000);
+        }
+    });
+
+    setTimeout(() => {
+        huntingScene.remove(animal);
+        const index = animals.indexOf(animal);
+        if (index > -1) animals.splice(index, 1);
+    }, 200);
+}
+
+// Keyboard handlers
+function onHuntingKeyDown(e) {
+    const key = e.key.toLowerCase();
+    if (key === 'w') huntingKeys.w = true;
+    if (key === 'a') huntingKeys.a = true;
+    if (key === 's') huntingKeys.s = true;
+    if (key === 'd') huntingKeys.d = true;
+}
+
+function onHuntingKeyUp(e) {
+    const key = e.key.toLowerCase();
+    if (key === 'w') huntingKeys.w = false;
+    if (key === 'a') huntingKeys.a = false;
+    if (key === 's') huntingKeys.s = false;
+    if (key === 'd') huntingKeys.d = false;
+}
+
+// Animation loop
+function animateHunting() {
+    if (!huntingGameActive) return;
+
+    requestAnimationFrame(animateHunting);
+
+    // Apply camera rotation
+    huntingCamera.rotation.order = 'YXZ';
+    huntingCamera.rotation.y = cameraRotation.yaw;
+    huntingCamera.rotation.x = cameraRotation.pitch;
+
+    // Update camera position based on WASD (relative to camera direction)
+    const moveSpeed = 0.15;
+    const forward = new THREE.Vector3();
+    const right = new THREE.Vector3();
+
+    // Get camera forward and right vectors
+    huntingCamera.getWorldDirection(forward);
+    forward.y = 0; // Keep movement on horizontal plane
+    forward.normalize();
+
+    right.crossVectors(forward, new THREE.Vector3(0, 1, 0));
+    right.normalize();
+
+    // Apply movement
+    if (huntingKeys.w) {
+        cameraVelocity.x += forward.x * moveSpeed;
+        cameraVelocity.z += forward.z * moveSpeed;
+    }
+    if (huntingKeys.s) {
+        cameraVelocity.x -= forward.x * moveSpeed;
+        cameraVelocity.z -= forward.z * moveSpeed;
+    }
+    if (huntingKeys.a) {
+        cameraVelocity.x -= right.x * moveSpeed;
+        cameraVelocity.z -= right.z * moveSpeed;
+    }
+    if (huntingKeys.d) {
+        cameraVelocity.x += right.x * moveSpeed;
+        cameraVelocity.z += right.z * moveSpeed;
+    }
+
+    // Apply camera movement with damping
+    huntingCamera.position.x += cameraVelocity.x;
+    huntingCamera.position.z += cameraVelocity.z;
+
+    // Camera bounds (don't go too far)
+    huntingCamera.position.x = Math.max(-20, Math.min(20, huntingCamera.position.x));
+    huntingCamera.position.z = Math.max(-10, Math.min(20, huntingCamera.position.z));
+
+    // Damping - slow down over time
+    cameraVelocity.x *= 0.85;
+    cameraVelocity.z *= 0.85;
+
+    // Update animals
+    for (let i = animals.length - 1; i >= 0; i--) {
+        const animal = animals[i];
+
+        if (animal.userData.killed) continue;
+
+        // Move animal in 3D space
+        animal.position.x += animal.userData.velocity.x;
+        animal.position.z += animal.userData.velocity.z;
+
+        // Bobbing motion for realism
+        animal.userData.bobPhase += 0.05;
+        animal.position.y += Math.sin(animal.userData.bobPhase) * 0.003;
+
+        // Make animals face their movement direction
+        const targetRotation = Math.atan2(animal.userData.velocity.x, animal.userData.velocity.z);
+        animal.rotation.y = targetRotation;
+
+        // Remove animals that are too far away
+        const distanceFromOrigin = Math.sqrt(
+            animal.position.x * animal.position.x +
+            animal.position.z * animal.position.z
+        );
+
+        if (distanceFromOrigin > 40) {
+            huntingScene.remove(animal);
+            animals.splice(i, 1);
+        }
+    }
+
+    huntingRenderer.render(huntingScene, huntingCamera);
+}
+
+// End hunting game
+function endHuntingGame() {
+    huntingGameActive = false;
+
+    // Release pointer lock
+    if (document.pointerLockElement) {
+        document.exitPointerLock();
+    }
+
+    // Hide lock prompt and crosshair
+    const lockPrompt = document.getElementById('hunting-lock-prompt');
+    const crosshair = document.getElementById('hunting-crosshair');
+    lockPrompt.classList.add('hidden');
+    crosshair.classList.remove('active');
+
+    // Reset keys
+    huntingKeys = { w: false, a: false, s: false, d: false };
+
+    let snacksGained = 0;
+    snacksGained += huntingKills.squirrels * ANIMAL_TYPES.squirrel.snackValue;
+    snacksGained += huntingKills.deer * ANIMAL_TYPES.deer.snackValue;
+    snacksGained += huntingKills.cats * ANIMAL_TYPES.cat.snackValue;
+
+    snacksGained = Math.max(0, snacksGained);
+
+    document.getElementById('final-squirrels').textContent = huntingKills.squirrels;
+    document.getElementById('final-deer').textContent = huntingKills.deer;
+    document.getElementById('final-cats').textContent = huntingKills.cats;
+    document.getElementById('snacks-amount').textContent = snacksGained;
+
+    document.getElementById('hunting-result-screen').classList.add('active');
+
+    // Apply snacks to game state
+    gameState.resources.snacks += snacksGained;
+    gameState.resources.snacks = Math.min(100, gameState.resources.snacks);
+}
+
+// Continue from hunting
+document.getElementById('hunting-continue-btn').addEventListener('click', () => {
+    document.getElementById('hunting-result-screen').classList.remove('active');
+    document.getElementById('hunting-overlay').classList.remove('active');
+
+    let message = `Hunting complete! `;
+    if (huntingKills.squirrels > 0) message += `Shot ${huntingKills.squirrels} squirrel(s). `;
+    if (huntingKills.deer > 0) message += `Shot ${huntingKills.deer} deer! `;
+    if (huntingKills.cats > 0) message += `Accidentally shot ${huntingKills.cats} cat(s)... `;
+    const snacks = Math.max(0, huntingKills.squirrels * 5 + huntingKills.deer * 15 + huntingKills.cats * -10);
+    message += `Gained ${snacks} snacks.`;
+
+    addLogEntry(message, snacks > 0 ? '' : 'negative');
+    updateUI();
+});
+
+// Window resize handler
+function onHuntingWindowResize() {
+    if (huntingCamera && huntingRenderer) {
+        huntingCamera.aspect = window.innerWidth / window.innerHeight;
+        huntingCamera.updateProjectionMatrix();
+        huntingRenderer.setSize(window.innerWidth, window.innerHeight);
+    }
+}
+
+// Show hunting overlay
+function showHuntingOverlay() {
+    document.getElementById('hunting-overlay').classList.add('active');
+    startHuntingGame();
+}

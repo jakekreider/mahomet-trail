@@ -377,3 +377,189 @@ body {
 .resource-fill.warning {
     background-color: #ffff00 !important;
 }
+
+/* Hunting Mini-game Overlay */
+.hunting-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: #000;
+    z-index: 1000;
+}
+
+.hunting-overlay.active {
+    display: block;
+}
+
+#hunting-canvas {
+    display: block;
+    cursor: crosshair;
+    width: 100%;
+    height: 100%;
+}
+
+#hunting-crosshair {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 40px;
+    height: 40px;
+    pointer-events: none;
+    z-index: 5;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+#hunting-crosshair.active {
+    opacity: 1;
+}
+
+#hunting-crosshair::before,
+#hunting-crosshair::after {
+    content: '';
+    position: absolute;
+    background-color: #00ff00;
+}
+
+#hunting-crosshair::before {
+    width: 2px;
+    height: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+#hunting-crosshair::after {
+    height: 2px;
+    width: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+#hunting-hud {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    right: 20px;
+    z-index: 10;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.hunting-hud-panel {
+    background-color: rgba(0, 0, 0, 0.8);
+    border: 2px solid #00ff00;
+    padding: 15px;
+    min-width: 200px;
+}
+
+.hunting-hud-item {
+    margin: 5px 0;
+    font-size: 1.1rem;
+    color: #00ff00;
+}
+
+#hunting-timer {
+    font-size: 1.5rem;
+    color: #ffff00;
+    font-weight: bold;
+}
+
+#hunting-ammo {
+    font-size: 1.2rem;
+}
+
+#hunting-ammo.low {
+    color: #ff6600;
+}
+
+#hunting-instructions {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0.8);
+    border: 2px solid #006600;
+    padding: 10px 20px;
+    text-align: center;
+    z-index: 10;
+    color: #00ff00;
+}
+
+#hunting-lock-prompt {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(0, 0, 0, 0.9);
+    border: 4px solid #00ff00;
+    padding: 30px 50px;
+    text-align: center;
+    z-index: 15;
+    color: #ffff00;
+    font-size: 2rem;
+    font-weight: bold;
+    animation: pulse 2s infinite;
+}
+
+#hunting-lock-prompt.hidden {
+    display: none;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+#hunting-result-screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.95);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 20;
+}
+
+#hunting-result-screen.active {
+    display: flex;
+}
+
+.hunting-result-box {
+    background-color: #000;
+    border: 4px solid #00ff00;
+    padding: 40px;
+    text-align: center;
+    max-width: 500px;
+}
+
+.hunting-result-title {
+    font-size: 2rem;
+    color: #ffff00;
+    margin-bottom: 20px;
+    text-shadow: 2px 2px #666600;
+}
+
+.hunting-result-stats {
+    margin: 20px 0;
+    font-size: 1.1rem;
+    color: #00ff00;
+}
+
+.hunting-result-stats div {
+    margin: 10px 0;
+}
+
+.hunting-snacks-gained {
+    font-size: 1.5rem;
+    color: #00ffff;
+    font-weight: bold;
+    margin: 20px 0;
+}

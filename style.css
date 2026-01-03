@@ -515,6 +515,105 @@ body {
     50% { opacity: 0.7; }
 }
 
+/* Mobile Controls */
+.mobile-joystick {
+    display: none;
+    position: absolute;
+    bottom: 80px;
+    left: 40px;
+    width: 120px;
+    height: 120px;
+    background-color: rgba(0, 255, 0, 0.15);
+    border: 3px solid rgba(0, 255, 0, 0.4);
+    border-radius: 50%;
+    z-index: 15;
+    touch-action: none;
+}
+
+.mobile-joystick-stick {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 50px;
+    height: 50px;
+    background-color: rgba(0, 255, 0, 0.6);
+    border: 2px solid #00ff00;
+    border-radius: 50%;
+    transition: none;
+    pointer-events: none;
+}
+
+.mobile-shoot-btn {
+    display: none;
+    position: absolute;
+    bottom: 80px;
+    right: 40px;
+    width: 100px;
+    height: 100px;
+    background-color: rgba(255, 0, 0, 0.3);
+    border: 4px solid #ff0000;
+    border-radius: 50%;
+    color: #ff0000;
+    font-family: 'Courier New', monospace;
+    font-size: 1rem;
+    font-weight: bold;
+    text-align: center;
+    line-height: 100px;
+    z-index: 15;
+    touch-action: none;
+    user-select: none;
+}
+
+.mobile-shoot-btn:active {
+    background-color: rgba(255, 0, 0, 0.6);
+    transform: scale(0.95);
+}
+
+/* Mobile Responsive HUD */
+@media (max-width: 768px) {
+    #hunting-hud {
+        flex-direction: column;
+        top: 10px;
+        left: 10px;
+        right: 10px;
+        gap: 10px;
+    }
+
+    .hunting-hud-panel {
+        padding: 10px;
+        min-width: auto;
+        width: 100%;
+    }
+
+    .hunting-hud-item {
+        font-size: 1rem;
+    }
+
+    #hunting-instructions {
+        font-size: 0.85rem;
+        padding: 8px 15px;
+        bottom: 210px;
+    }
+
+    #hunting-timer {
+        font-size: 1.3rem;
+    }
+
+    #hunting-crosshair {
+        width: 50px;
+        height: 50px;
+    }
+}
+
+/* Prevent scrolling on mobile */
+body.hunting-active {
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+    height: 100%;
+}
+
 #hunting-result-screen {
     position: absolute;
     top: 0;

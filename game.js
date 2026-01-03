@@ -339,6 +339,15 @@ let cameraVelocity = { x: 0, z: 0 };
 let cameraRotation = { yaw: 0, pitch: 0 };
 let isPointerLocked = false;
 
+// Mobile controls
+let isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+let touchState = {
+    moveTouch: null,
+    lookTouch: null,
+    moveVector: { x: 0, y: 0 },
+    lookStart: { x: 0, y: 0 }
+};
+
 // Animal types with their properties
 const ANIMAL_TYPES = {
     squirrel: {
@@ -385,45 +394,88 @@ function initHuntingScene() {
 
     window.addEventListener('resize', onHuntingWindowResize);
 
-    // Keyboard controls
-    document.addEventListener('keydown', onHuntingKeyDown);
-    document.addEventListener('keyup', onHuntingKeyUp);
+    // Keyboard controls (desktop only)
+    if (!isMobile) {
+        document.addEventListener('keydown', onHuntingKeyDown);
+        document.addEventListener('keyup', onHuntingKeyUp);
 
-    // Pointer lock for mouse look
-    canvas.addEventListener('click', () => {
-        if (!isPointerLocked) {
-            canvas.requestPointerLock();
-        } else {
-            onHuntingShoot();
-        }
-    });
-
-    let timerStarted = false;
-    document.addEventListener('pointerlockchange', () => {
-        const wasLocked = isPointerLocked;
-        isPointerLocked = document.pointerLockElement === canvas;
-        const lockPrompt = document.getElementById('hunting-lock-prompt');
-        const crosshair = document.getElementById('hunting-crosshair');
-
-        if (isPointerLocked) {
-            lockPrompt.classList.add('hidden');
-            crosshair.classList.add('active');
-
-            // Start timer on first lock
-            if (huntingGameActive && !timerStarted) {
-                timerStarted = true;
-                startHuntingTimer();
+        // Pointer lock for mouse look
+        canvas.addEventListener('click', () => {
+            if (!isPointerLocked) {
+                canvas.requestPointerLock();
+            } else {
+                onHuntingShoot();
             }
-        } else if (huntingGameActive) {
-            lockPrompt.classList.remove('hidden');
-            crosshair.classList.remove('active');
-        }
-    });
+        });
 
-    document.addEventListener('mousemove', onMouseMove);
+        let timerStarted = false;
+        document.addEventListener('pointerlockchange', () => {
+            const wasLocked = isPointerLocked;
+            isPointerLocked = document.pointerLockElement === canvas;
+            const lockPrompt = document.getElementById('hunting-lock-prompt');
+            const crosshair = document.getElementById('hunting-crosshair');
+
+            if (isPointerLocked) {
+                lockPrompt.classList.add('hidden');
+                crosshair.classList.add('active');
+
+                // Start timer on first lock
+                if (huntingGameActive && !timerStarted) {
+                    timerStarted = true;
+                    startHuntingTimer();
+                }
+            } else if (huntingGameActive) {
+                lockPrompt.classList.remove('hidden');
+                crosshair.classList.remove('active');
+            }
+        });
+
+        document.addEventListener('mousemove', onMouseMove);
+    } else {
+        // Mobile touch controls
+        canvas.addEventListener('touchstart', onTouchStart, { passive: false });
+        canvas.addEventListener('touchmove', onTouchMove, { passive: false });
+        canvas.addEventListener('touchend', onTouchEnd, { passive: false });
+
+        // Prevent default touch behaviors globally during hunting
+        document.addEventListener('touchmove', (e) => {
+            if (huntingGameActive) e.preventDefault();
+        }, { passive: false });
+
+        document.addEventListener('gesturestart', (e) => {
+            if (huntingGameActive) e.preventDefault();
+        });
+
+        // Hide pointer lock prompt on mobile
+        const lockPrompt = document.getElementById('hunting-lock-prompt');
+        lockPrompt.style.display = 'none';
+
+        // Show crosshair immediately on mobile
+        const crosshair = document.getElementById('hunting-crosshair');
+        crosshair.classList.add('active');
+
+        // Show mobile joystick and setup shoot button
+        const joystick = document.getElementById('mobile-joystick');
+        const shootBtn = document.getElementById('mobile-shoot-btn');
+        if (joystick) joystick.style.display = 'block';
+        if (shootBtn) {
+            shootBtn.style.display = 'block';
+            shootBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onHuntingShoot();
+            });
+        }
+
+        // Update instructions for mobile
+        const instructions = document.getElementById('hunting-instructions');
+        if (instructions) {
+            instructions.textContent = 'Left joystick to move | Drag right side to aim | Tap SHOOT button to fire';
+        }
+    }
 }
 
-// Mouse movement handler
+// Mouse movement handler (desktop)
 function onMouseMove(e) {
     if (!isPointerLocked || !huntingGameActive) return;
 
@@ -433,6 +485,118 @@ function onMouseMove(e) {
 
     // Clamp pitch to prevent camera flipping
     cameraRotation.pitch = Math.max(-Math.PI / 3, Math.min(Math.PI / 3, cameraRotation.pitch));
+}
+
+// Touch event handlers (mobile)
+function onTouchStart(e) {
+    if (!huntingGameActive) return;
+    e.preventDefault();
+
+    const canvas = document.getElementById('hunting-canvas');
+    const rect = canvas.getBoundingClientRect();
+    const midpoint = rect.width / 2;
+
+    for (let i = 0; i < e.changedTouches.length; i++) {
+        const touch = e.changedTouches[i];
+        const touchX = touch.clientX - rect.left;
+
+        if (touchX < midpoint) {
+            // Left side - movement joystick
+            touchState.moveTouch = touch.identifier;
+            const joystick = document.getElementById('mobile-joystick');
+            const joystickRect = joystick.getBoundingClientRect();
+            const centerX = joystickRect.left + joystickRect.width / 2;
+            const centerY = joystickRect.top + joystickRect.height / 2;
+
+            updateJoystick(touch.clientX, touch.clientY, centerX, centerY);
+        } else {
+            // Right side - look around
+            touchState.lookTouch = touch.identifier;
+            touchState.lookStart.x = touch.clientX;
+            touchState.lookStart.y = touch.clientY;
+        }
+    }
+}
+
+function onTouchMove(e) {
+    if (!huntingGameActive) return;
+    e.preventDefault();
+
+    const canvas = document.getElementById('hunting-canvas');
+    const rect = canvas.getBoundingClientRect();
+
+    for (let i = 0; i < e.changedTouches.length; i++) {
+        const touch = e.changedTouches[i];
+
+        if (touch.identifier === touchState.moveTouch) {
+            // Update movement joystick
+            const joystick = document.getElementById('mobile-joystick');
+            const joystickRect = joystick.getBoundingClientRect();
+            const centerX = joystickRect.left + joystickRect.width / 2;
+            const centerY = joystickRect.top + joystickRect.height / 2;
+
+            updateJoystick(touch.clientX, touch.clientY, centerX, centerY);
+        } else if (touch.identifier === touchState.lookTouch) {
+            // Update look direction
+            const deltaX = touch.clientX - touchState.lookStart.x;
+            const deltaY = touch.clientY - touchState.lookStart.y;
+
+            const sensitivity = 0.003;
+            cameraRotation.yaw -= deltaX * sensitivity;
+            cameraRotation.pitch -= deltaY * sensitivity;
+
+            // Clamp pitch
+            cameraRotation.pitch = Math.max(-Math.PI / 3, Math.min(Math.PI / 3, cameraRotation.pitch));
+
+            touchState.lookStart.x = touch.clientX;
+            touchState.lookStart.y = touch.clientY;
+        }
+    }
+}
+
+function onTouchEnd(e) {
+    if (!huntingGameActive) return;
+    e.preventDefault();
+
+    for (let i = 0; i < e.changedTouches.length; i++) {
+        const touch = e.changedTouches[i];
+
+        if (touch.identifier === touchState.moveTouch) {
+            touchState.moveTouch = null;
+            touchState.moveVector = { x: 0, y: 0 };
+            resetJoystick();
+        } else if (touch.identifier === touchState.lookTouch) {
+            touchState.lookTouch = null;
+        }
+    }
+}
+
+function updateJoystick(touchX, touchY, centerX, centerY) {
+    const deltaX = touchX - centerX;
+    const deltaY = touchY - centerY;
+    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+    const maxDistance = 50; // pixels
+
+    const clampedDistance = Math.min(distance, maxDistance);
+    const angle = Math.atan2(deltaY, deltaX);
+
+    touchState.moveVector.x = Math.cos(angle) * (clampedDistance / maxDistance);
+    touchState.moveVector.y = Math.sin(angle) * (clampedDistance / maxDistance);
+
+    // Update joystick stick visual
+    const stick = document.getElementById('mobile-joystick-stick');
+    if (stick) {
+        const stickX = Math.cos(angle) * clampedDistance;
+        const stickY = Math.sin(angle) * clampedDistance;
+        stick.style.transform = `translate(-50%, -50%) translate(${stickX}px, ${stickY}px)`;
+    }
+}
+
+function resetJoystick() {
+    const stick = document.getElementById('mobile-joystick-stick');
+    if (stick) {
+        stick.style.transform = 'translate(-50%, -50%)';
+    }
 }
 
 // Create ground reference
@@ -663,13 +827,19 @@ function startHuntingGame() {
     huntingKeys = { w: false, a: false, s: false, d: false };
     isPointerLocked = false;
 
-    // Show lock prompt
+    // Show lock prompt (desktop only)
     const lockPrompt = document.getElementById('hunting-lock-prompt');
-    lockPrompt.classList.remove('hidden');
+    if (!isMobile) {
+        lockPrompt.classList.remove('hidden');
+    }
 
     updateHuntingHUD();
 
-    // Timer and spawning will start when pointer is locked
+    // Start timer immediately on mobile, on pointer lock for desktop
+    if (isMobile) {
+        startHuntingTimer();
+    }
+
     animateHunting();
 }
 
@@ -888,7 +1058,7 @@ function animateHunting() {
     huntingCamera.rotation.y = cameraRotation.yaw;
     huntingCamera.rotation.x = cameraRotation.pitch;
 
-    // Update camera position based on WASD (relative to camera direction)
+    // Update camera position based on input (WASD or touch)
     const moveSpeed = 0.15;
     const forward = new THREE.Vector3();
     const right = new THREE.Vector3();
@@ -901,7 +1071,7 @@ function animateHunting() {
     right.crossVectors(forward, new THREE.Vector3(0, 1, 0));
     right.normalize();
 
-    // Apply movement
+    // Apply movement from keyboard (desktop)
     if (huntingKeys.w) {
         cameraVelocity.x += forward.x * moveSpeed;
         cameraVelocity.z += forward.z * moveSpeed;
@@ -917,6 +1087,15 @@ function animateHunting() {
     if (huntingKeys.d) {
         cameraVelocity.x += right.x * moveSpeed;
         cameraVelocity.z += right.z * moveSpeed;
+    }
+
+    // Apply movement from touch joystick (mobile)
+    if (isMobile && touchState.moveTouch !== null) {
+        const touchMoveSpeed = 0.2;
+        cameraVelocity.x += right.x * touchState.moveVector.x * touchMoveSpeed;
+        cameraVelocity.z += right.z * touchState.moveVector.x * touchMoveSpeed;
+        cameraVelocity.x += forward.x * -touchState.moveVector.y * touchMoveSpeed;
+        cameraVelocity.z += forward.z * -touchState.moveVector.y * touchMoveSpeed;
     }
 
     // Apply camera movement with damping
@@ -1005,6 +1184,20 @@ function endHuntingGame() {
 document.getElementById('hunting-continue-btn').addEventListener('click', () => {
     document.getElementById('hunting-result-screen').classList.remove('active');
     document.getElementById('hunting-overlay').classList.remove('active');
+    document.body.classList.remove('hunting-active');
+
+    // Restore scrolling
+    document.body.style.overflow = '';
+    document.body.style.position = '';
+    document.body.style.width = '';
+
+    // Hide mobile controls
+    if (isMobile) {
+        const joystick = document.getElementById('mobile-joystick');
+        const shootBtn = document.getElementById('mobile-shoot-btn');
+        if (joystick) joystick.style.display = 'none';
+        if (shootBtn) shootBtn.style.display = 'none';
+    }
 
     let message = `Hunting complete! `;
     if (huntingKills.squirrels > 0) message += `Shot ${huntingKills.squirrels} squirrel(s). `;
@@ -1029,5 +1222,12 @@ function onHuntingWindowResize() {
 // Show hunting overlay
 function showHuntingOverlay() {
     document.getElementById('hunting-overlay').classList.add('active');
+    document.body.classList.add('hunting-active');
+
+    // Prevent scrolling on mobile
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
+
     startHuntingGame();
 }

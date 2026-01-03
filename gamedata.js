@@ -182,7 +182,7 @@ const gameData = {
             id: "lost_patience",
             type: "critical",
             title: "Lost All Patience",
-            text: "You can't take it anymore. You turn around and go back home.",
+            text: "You can't take it anymore. You turn around and go back home, before your inner Jack Torrance takes over.",
             condition: "patience <= 0",
             fatal: true,
             effects: {}
@@ -194,7 +194,6 @@ const gameData = {
         messages: [
             "After an arduous 12-mile journey, you have arrived in Mahomet!",
             "Your van survived. Your family survived. Mostly.",
-            "The legends will speak of your journey for generations.",
             "Casey's General Store never looked so good."
         ]
     }
